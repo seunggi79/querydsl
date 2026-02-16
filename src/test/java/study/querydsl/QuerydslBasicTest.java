@@ -56,6 +56,7 @@ public class QuerydslBasicTest {
                 .getSingleResult();
         assertThat(findMember.getUsername()).isEqualTo("member1");
     }
+
     @Test
     public void startQuerydsl() {
         //member1을 찾아라.
@@ -68,6 +69,7 @@ public class QuerydslBasicTest {
                 .fetchOne();
         assertThat(findMember.getUsername()).isEqualTo("member1");
     }
+
     @Test
     public void startQuerydsl2() {
         //member1을 찾아라.
@@ -79,6 +81,7 @@ public class QuerydslBasicTest {
                 .fetchOne();
         assertThat(findMember.getUsername()).isEqualTo("member1");
     }
+
     @Test
     public void startQuerydsl3() {
         //member1을 찾아라.
@@ -89,6 +92,7 @@ public class QuerydslBasicTest {
                 .fetchOne();
         assertThat(findMember.getUsername()).isEqualTo("member1");
     }
+
     @Test
     public void search() {
         Member findMember = queryFactory
@@ -98,6 +102,7 @@ public class QuerydslBasicTest {
                 .fetchOne();
         assertThat(findMember.getUsername()).isEqualTo("member1");
     }
+
     @Test
     public void searchAndParam() {
         List<Member> result1 = queryFactory
@@ -107,6 +112,7 @@ public class QuerydslBasicTest {
                 .fetch();
         assertThat(result1.size()).isEqualTo(1);
     }
+
     /**
      * 회원 정렬 순서
      * 1. 회원 나이 내림차순(desc)
@@ -141,6 +147,7 @@ public class QuerydslBasicTest {
                 .fetch();
         assertThat(result.size()).isEqualTo(2);
     }
+
     @Test
     public void paging2() {
         QueryResults<Member> queryResults = queryFactory
@@ -201,6 +208,7 @@ public class QuerydslBasicTest {
         assertThat(teamB.get(team.name)).isEqualTo("teamB");
         assertThat(teamB.get(member.age.avg())).isEqualTo(35);
     }
+
     /**
      * 팀 A에 소속된 모든 회원
      */
@@ -234,5 +242,43 @@ public class QuerydslBasicTest {
         assertThat(result)
                 .extracting("username")
                 .containsExactly("teamA", "teamB");
+    }
+
+    /**
+     * 예) 회원과 팀을 조인하면서, 팀 이름이 teamA인 팀만 조인, 회원은 모두 조회
+     * JPQL: SELECT m, t FROM Member m LEFT JOIN m.team t on t.name = 'teamA'
+     * SQL: SELECT m.*, t.* FROM Member m LEFT JOIN Team t ON m.TEAM_ID=t.id and
+     * t.name='teamA'
+     */
+    @Test
+    public void join_on_filtering() throws Exception {
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(member.team, team).on(team.name.eq("teamA"))
+                .fetch();
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+    }
+
+    /**
+     * 2. 연관관계 없는 엔티티 외부 조인
+     * 예) 회원의 이름과 팀의 이름이 같은 대상 외부 조인
+     * JPQL: SELECT m, t FROM Member m LEFT JOIN Team t on m.username = t.name
+     * SQL: SELECT m.*, t.* FROM Member m LEFT JOIN Team t ON m.username = t.name
+     */
+    @Test
+    public void join_on_no_relation() throws Exception {
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(team).on(member.username.eq(team.name))
+                .fetch();
+        for (Tuple tuple : result) {
+            System.out.println("t=" + tuple);
+        }
     }
 }
